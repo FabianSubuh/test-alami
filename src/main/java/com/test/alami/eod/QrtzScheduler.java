@@ -59,7 +59,7 @@ public class QrtzScheduler {
     public SimpleTriggerFactoryBean trigger(JobDetail job) {
         SimpleTriggerFactoryBean trigger = new SimpleTriggerFactoryBean();
         trigger.setJobDetail(job);
-        trigger.setRepeatInterval(10000);
+        trigger.setRepeatInterval(100000);
         trigger.setRepeatCount(SimpleTrigger.REPEAT_INDEFINITELY);
         return trigger;
     }

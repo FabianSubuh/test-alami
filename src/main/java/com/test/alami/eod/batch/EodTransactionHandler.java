@@ -7,8 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.ResourceUtils;
 
 import java.io.*;
+import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -27,17 +29,17 @@ public class EodTransactionHandler {
 
     private List<TransactionDto> listTrx = null;
 
-    private static final String THREAD1="ThreadNo1";
-    private static final String THREAD2a="ThreadNo2a";
-    private static final String THREAD2b="ThreadNo2b";
-    private static final String THREAD3="ThreadNo3";
+    private static final String THREAD1 = "ThreadNo1";
+    private static final String THREAD2a = "ThreadNo2a";
+    private static final String THREAD2b = "ThreadNo2b";
+    private static final String THREAD3 = "ThreadNo3";
 
     private static EodTransactionHandler instance = null;
     private boolean running = false;
 
-    public static EodTransactionHandler getInstance(){
-        if (instance == null){
-            instance =  new EodTransactionHandler();
+    public static EodTransactionHandler getInstance() {
+        if (instance == null) {
+            instance = new EodTransactionHandler();
         }
         return instance;
     }
@@ -51,41 +53,36 @@ public class EodTransactionHandler {
     }
 
     public void execute() throws Exception {
-        if(running)
+        if (running)
             return;
         running = true;
 
         File dir = null;
         log.info("START  ......");
         try {
-            String path ="/home/bian/Documents/test-alami/src/main/resources/in/";
-            dir = new File(String.valueOf(path));
-            System.out.println(path);
-            if (!dir.isDirectory()) {
-                throw new Exception("Fatal error PATHis not directory! " + dir.getAbsolutePath());
-            }
-            File[] files = dir.listFiles();
-            for (File file : files) {
-                if (file.getName().endsWith(".csv")) {
-                    long time = System.currentTimeMillis();
+            ClassLoader classLoader = getClass().getClassLoader();
+//            File file = new File(classLoader.getResource("/in/Before Eod.csv").getFile());
+            File file = ResourceUtils.getFile(
+                    "classpath:in/Before Eod.csv");
+            if (file.getName().endsWith(".csv")) {
+                long time = System.currentTimeMillis();
 
-                    listTrx = new ArrayList<>();
-                    listTrx = getDataTrx(file);
-                    log.info("get "+ listTrx.size());
-                    listTrx = doProcessStep(THREAD1,listTrx);
-                    log.info("s1 "+ listTrx.size());
-                    listTrx = doProcessStep(THREAD2a,listTrx);
-                    log.info("s2a "+ listTrx.size());
-                    listTrx = doProcessStep(THREAD2b,listTrx);
-                    log.info("s2b "+ listTrx.size());
-                    listTrx = doProcessStep(THREAD3,listTrx);
-                    log.info("s3 "+ listTrx.size());
-                    writeFile();
-                    log.info("parsing file " + file.getAbsolutePath() + " take ~ " + (System.currentTimeMillis() - time) + " ms");
-                }
+                listTrx = new ArrayList<>();
+                listTrx = getDataTrx(file);
+                log.info("get " + listTrx.size());
+                listTrx = doProcessStep(THREAD1, listTrx);
+                log.info("s1 " + listTrx.size());
+                listTrx = doProcessStep(THREAD2a, listTrx);
+                log.info("s2a " + listTrx.size());
+                listTrx = doProcessStep(THREAD2b, listTrx);
+                log.info("s2b " + listTrx.size());
+                listTrx = doProcessStep(THREAD3, listTrx);
+                log.info("s3 " + listTrx.size());
+                writeFile();
+                log.info("End Process Data "+ (System.currentTimeMillis() - time) + " ms");
             }
 
-        } catch(Exception e) {
+        } catch (Exception e) {
             log.error(e.getMessage(), e);
         } finally {
             running = false;
@@ -93,49 +90,47 @@ public class EodTransactionHandler {
 
     }
 
-    private List<TransactionDto> doProcessStep(String step,List<TransactionDto> listTrx){
+    private List<TransactionDto> doProcessStep(String step, List<TransactionDto> listTrx) {
         List<TransactionDto> listStepTrx = new ArrayList<>();
         try {
             ExecutorService executor = Executors.newFixedThreadPool(8);
-            for (final TransactionDto trx : listTrx) {
-                executor.submit(new Thread(step) {
+            for (TransactionDto trx : listTrx) {
 
-                    @Override
-                    public void run() {
-                        long threadId = Thread.currentThread().getId();
-                        switch (step) {
-                            case THREAD1 :
-                                trx.setAvgBalance((trx.getBalance()+trx.getPrevBalance())/2);
-                                trx.setThread1No(THREAD1+"-"+threadId);
-                                break;
-                            case THREAD2a :
-                                if (trx.getBalance() >= 100 && trx.getBalance() <= 150 ){
-                                    trx.setFreeTransfer(trx.getFreeTransfer()+5);
-                                }
-                                trx.setThread2aNo(THREAD2a+"-"+threadId);
-                                break;
-                            case THREAD2b :
-                                if (trx.getBalance() > 150){
-                                    trx.setFreeTransfer(trx.getFreeTransfer()+25);
-                                }
-                                trx.setThread2bNo(THREAD2b+"-"+threadId);
-                                break;
-                            case THREAD3 :
-                                if (trx.getId() >100){
-                                    trx.setAvgBalance((trx.getBalance()+trx.getPrevBalance())/2);
-                                }
-                                trx.setThread3No(THREAD3+"-"+threadId);
-                                break;
-                        }
-
+                executor.execute(() -> {
+                    log.info("Process : {} " +step +" With ID "+ trx.getId());
+                    switch (step) {
+                        case THREAD1:
+                            trx.setAvgBalance((trx.getBalance() + trx.getPrevBalance()) / 2);
+                            trx.setThread1No(Thread.currentThread().getName() + "-" + Thread.currentThread().getId());
+                            break;
+                        case THREAD2a:
+                            if (trx.getBalance() >= 100 && trx.getBalance() <= 150) {
+                                trx.setFreeTransfer(trx.getFreeTransfer() + 5);
+                            }
+                            trx.setThread2aNo(Thread.currentThread().getName() + "-" + Thread.currentThread().getId());
+                            break;
+                        case THREAD2b:
+                            if (trx.getBalance() > 150) {
+                                trx.setFreeTransfer(trx.getFreeTransfer() + 25);
+                            }
+                            trx.setThread2bNo(Thread.currentThread().getName() + "-" + Thread.currentThread().getId());
+                            break;
+                        case THREAD3:
+                            if (trx.getId() > 100) {
+                                trx.setBalance((trx.getBalance() + 10));
+                            }
+                            trx.setThread3No(Thread.currentThread().getName() + "-" + Thread.currentThread().getId());
+                            break;
                     }
-                });
 
+
+                });
                 listStepTrx.add(trx);
             }
+
             executor.shutdown();
             try {
-                executor.awaitTermination(60, TimeUnit.SECONDS);
+                executor.awaitTermination(100, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 log.error(String.valueOf(e));
@@ -147,7 +142,7 @@ public class EodTransactionHandler {
         return listStepTrx;
     }
 
-    private List<TransactionDto> getDataTrx(File file) throws Exception{
+    private List<TransactionDto> getDataTrx(File file) throws Exception {
         listTrx = new ArrayList<>();
         final String originalFileName = file.getName();
         if (!file.getName().equalsIgnoreCase("Before Eod.csv")) {
@@ -160,9 +155,9 @@ public class EodTransactionHandler {
             in = new FileInputStream(file);
             br = new BufferedReader(new InputStreamReader(in));
             br.readLine();// skip first line
-            String s= null;
+            String s = null;
 
-            while ((s = br.readLine()) != null){
+            while ((s = br.readLine()) != null) {
                 String[] data = s.split(";");
                 TransactionDto trx = new TransactionDto();
                 trx.setId(Integer.valueOf(data[0]));
@@ -176,9 +171,9 @@ public class EodTransactionHandler {
                 listTrx.add(trx);
             }
 
-        }catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             if (in != null)
                 in.close();
             if (br != null)
@@ -189,7 +184,9 @@ public class EodTransactionHandler {
     }
 
     private void writeFile() throws Exception {
-        File fout = new File( "/home/bian/Documents/test-alami/src/main/resources/out/After Eod.csv");
+//        URL url = getClass().getResource("/out/After Eod.csv");
+        ClassLoader classLoader = getClass().getClassLoader();
+        File fout = new File("After Eod.csv");
         if (!fout.exists())
             fout.createNewFile();
 
@@ -197,7 +194,7 @@ public class EodTransactionHandler {
         StringBuffer sbOut = new StringBuffer();
         try {
             out = new FileOutputStream(fout);
-            for (TransactionDto trx: listTrx) {
+            for (TransactionDto trx : listTrx) {
                 sbOut.append(trx.toString());
                 sbOut.append("\n");
             }
@@ -206,9 +203,9 @@ public class EodTransactionHandler {
                 log.debug("writing  file...");
                 out.write(sbOut.toString().getBytes());
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             if (out != null)
                 out.close();
         }
