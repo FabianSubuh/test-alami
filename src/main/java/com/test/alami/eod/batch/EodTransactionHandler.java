@@ -101,25 +101,25 @@ public class EodTransactionHandler {
                     switch (step) {
                         case THREAD1:
                             trx.setAvgBalance((trx.getBalance() + trx.getPrevBalance()) / 2);
-                            trx.setThread1No(Thread.currentThread().getName() + "-" + Thread.currentThread().getId());
+                            trx.setThread1No(Thread.currentThread().getName());
                             break;
                         case THREAD2a:
                             if (trx.getBalance() >= 100 && trx.getBalance() <= 150) {
                                 trx.setFreeTransfer(trx.getFreeTransfer() + 5);
                             }
-                            trx.setThread2aNo(Thread.currentThread().getName() + "-" + Thread.currentThread().getId());
+                            trx.setThread2aNo(Thread.currentThread().getName());
                             break;
                         case THREAD2b:
                             if (trx.getBalance() > 150) {
                                 trx.setFreeTransfer(trx.getFreeTransfer() + 25);
                             }
-                            trx.setThread2bNo(Thread.currentThread().getName() + "-" + Thread.currentThread().getId());
+                            trx.setThread2bNo(Thread.currentThread().getName());
                             break;
                         case THREAD3:
                             if (trx.getId() > 100) {
                                 trx.setBalance((trx.getBalance() + 10));
                             }
-                            trx.setThread3No(Thread.currentThread().getName() + "-" + Thread.currentThread().getId());
+                            trx.setThread3No(Thread.currentThread().getName());
                             break;
                     }
 
